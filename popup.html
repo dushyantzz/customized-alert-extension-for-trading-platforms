@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Advanced Trading Notifications</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Trading Notifications</h1>
+      <div class="status-indicator">
+        <span id="status-dot" class="status-dot"></span>
+        <span id="status-text">Initializing...</span>
+      </div>
+    </header>
+
+    <div class="tabs">
+      <button class="tab-button active" data-tab="dashboard">Dashboard</button>
+      <button class="tab-button" data-tab="alerts">Alerts</button>
+      <button class="tab-button" data-tab="custom-alerts">Custom Alerts</button>
+      <button class="tab-button" data-tab="settings">Settings</button>
+    </div>
+
+    <div class="tab-content">
+      <!-- Dashboard Tab -->
+      <div id="dashboard" class="tab-pane active">
+        <div class="dashboard-header">
+          <h2>Monitored Symbols</h2>
+          <button id="refresh-data" class="action-button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M23 4v6h-6"></path>
+              <path d="M1 20v-6h6"></path>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
+              <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"></path>
+            </svg>
+            Refresh
+          </button>
+        </div>
+
+        <div id="symbols-container" class="symbols-container">
+          <!-- Symbols will be populated here -->
+          <div class="loading-spinner">Loading...</div>
+        </div>
+
+        <div class="recent-alerts">
+          <h3>Recent Alerts</h3>
+          <div id="recent-alerts-container">
+            <!-- Recent alerts will be populated here -->
+            <p class="no-data">No recent alerts</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Alerts Tab -->
+      <div id="alerts" class="tab-pane">
+        <div class="alerts-header">
+          <h2>Alert History</h2>
+          <button id="clear-alerts" class="action-button danger">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+            Clear All
+          </button>
+        </div>
+
+        <div id="alerts-container" class="alerts-container">
+          <!-- Alerts will be populated here -->
+          <p class="no-data">No alerts found</p>
+        </div>
+      </div>
+
+      <!-- Custom Alerts Tab -->
+      <div id="custom-alerts" class="tab-pane">
+        <div class="custom-alerts-header">
+          <h2>Custom Alerts</h2>
+          <button id="check-custom-alerts" class="action-button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+            Check Now
+          </button>
+        </div>
+
+        <div class="custom-alert-creator">
+          <h3>Create New Alert</h3>
+          <p class="helper-text">Describe the alert you want in natural language, for example:</p>
+          <ul class="examples">
+            <li>"Alert me when MACD crosses above signal line on AAPL"</li>
+            <li>"Notify me if RSI goes below 30 on any of my watchlist stocks"</li>
+            <li>"Alert when EMA(9) crosses above EMA(21) for TSLA"</li>
+          </ul>
+
+          <div class="alert-input-container">
+            <input type="text" id="custom-alert-input" placeholder="Describe your alert condition...">
+            <button id="create-custom-alert" class="primary-button">Create Alert</button>
+          </div>
+        </div>
+
+        <div id="custom-alerts-container" class="custom-alerts-container">
+          <!-- Custom alerts will be populated here -->
+          <p class="no-data">No custom alerts created</p>
+        </div>
+      </div>
+
+      <!-- Settings Tab -->
+      <div id="settings" class="tab-pane">
+        <form id="settings-form">
+          <div class="form-section">
+            <h3>Symbols</h3>
+            <div class="form-group">
+              <label for="symbols">Symbols to Monitor (comma-separated)</label>
+              <input type="text" id="symbols" name="symbols" placeholder="AAPL, MSFT, GOOGL, AMZN, TSLA">
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3>Timeframe</h3>
+            <div class="form-group">
+              <label for="timeframe">Candle Timeframe</label>
+              <select id="timeframe" name="timeframe">
+                <option value="1m">1 Minute</option>
+                <option value="5m">5 Minutes</option>
+                <option value="15m" selected>15 Minutes</option>
+                <option value="1h">1 Hour</option>
+                <option value="4h">4 Hours</option>
+                <option value="1d">1 Day</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3>Data Source</h3>
+            <div class="form-group">
+              <label for="api-source">Financial Data API</label>
+              <select id="api-source" name="apiSource">
+                <option value="alphavantage" selected>Alpha Vantage</option>
+                <option value="financialmodelingprep">Financial Modeling Prep</option>
+                <option value="polygon">Polygon.io</option>
+                <option value="tiingo">Tiingo</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3>API Configuration</h3>
+            <div class="form-group">
+              <p class="info-message">API keys are securely stored and managed by the extension. You don't need to enter them here.</p>
+            </div>
+
+            <div class="form-group">
+              <label for="api-status">API Connection Status</label>
+              <div id="api-status" class="api-status">
+                <div class="status-item">
+                  <span class="status-label">Data API:</span>
+                  <span class="status-value" id="data-api-status">Checking...</span>
+                </div>
+                <div class="status-item">
+                  <span class="status-label">AI API:</span>
+                  <span class="status-value" id="ai-api-status">Checking...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3>Notification Settings</h3>
+            <div class="form-group checkbox">
+              <input type="checkbox" id="simultaneous-crossovers" name="notificationSettings.simultaneousCrossovers" checked>
+              <label for="simultaneous-crossovers">Notify on Simultaneous Crossovers</label>
+            </div>
+
+            <div class="form-group checkbox">
+              <input type="checkbox" id="sequential-crossovers" name="notificationSettings.sequentialCrossovers" checked>
+              <label for="sequential-crossovers">Notify on Sequential Crossovers</label>
+            </div>
+
+            <div class="form-group">
+              <label for="max-candle-window">Maximum Candle Window for Sequential Crossovers</label>
+              <input type="number" id="max-candle-window" name="notificationSettings.maxCandleWindow" min="1" max="20" value="6">
+            </div>
+
+            <div class="form-group checkbox">
+              <input type="checkbox" id="include-ai-explanation" name="notificationSettings.includeAiExplanation" checked>
+              <label for="include-ai-explanation">Include AI Explanation in Notifications</label>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" id="save-settings" class="primary-button">Save Settings</button>
+            <button type="button" id="reset-settings" class="secondary-button">Reset to Defaults</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="ai-assistant" class="ai-assistant">
+      <div class="ai-assistant-header">
+        <h3>AI Assistant</h3>
+        <button id="toggle-ai" class="toggle-button">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="18 15 12 9 6 15"></polyline>
+          </svg>
+        </button>
+      </div>
+
+      <div class="ai-assistant-content">
+        <div id="ai-messages" class="ai-messages">
+          <!-- AI messages will be populated here -->
+          <div class="ai-message">
+            <div class="ai-message-content">
+              <p>Hello! I'm your AI trading assistant. Ask me about any alerts or trading concepts.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="ai-input">
+          <input type="text" id="ai-question" placeholder="Ask about alerts or trading concepts...">
+          <button id="send-question">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

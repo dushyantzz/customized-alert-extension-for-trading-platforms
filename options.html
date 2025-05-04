@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Advanced Trading Notifications - Options</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Advanced Trading Notifications</h1>
+      <h2>Advanced Settings</h2>
+    </header>
+    
+    <main>
+      <form id="options-form">
+        <div class="form-section">
+          <h3>Symbols and Watchlists</h3>
+          
+          <div class="form-group">
+            <label for="symbols">Symbols to Monitor</label>
+            <div class="symbols-container">
+              <div id="symbols-list" class="symbols-list">
+                <!-- Symbols will be added here -->
+              </div>
+              <div class="symbols-actions">
+                <input type="text" id="new-symbol" placeholder="Add symbol...">
+                <button type="button" id="add-symbol" class="action-button">Add</button>
+              </div>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="watchlists">Watchlists</label>
+            <div class="watchlists-container">
+              <div class="watchlist-item">
+                <input type="checkbox" id="watchlist-tech" name="watchlists" value="tech" checked>
+                <label for="watchlist-tech">Technology (AAPL, MSFT, GOOGL, META, AMZN)</label>
+              </div>
+              <div class="watchlist-item">
+                <input type="checkbox" id="watchlist-finance" name="watchlists" value="finance">
+                <label for="watchlist-finance">Finance (JPM, BAC, GS, WFC, C)</label>
+              </div>
+              <div class="watchlist-item">
+                <input type="checkbox" id="watchlist-crypto" name="watchlists" value="crypto">
+                <label for="watchlist-crypto">Crypto (BTC-USD, ETH-USD, SOL-USD, ADA-USD)</label>
+              </div>
+              <div class="watchlist-item">
+                <input type="checkbox" id="watchlist-custom" name="watchlists" value="custom">
+                <label for="watchlist-custom">Custom Watchlist</label>
+                <input type="text" id="custom-watchlist" placeholder="Comma-separated symbols" disabled>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="form-section">
+          <h3>Technical Indicators</h3>
+          
+          <div class="form-group">
+            <label>MACD Settings</label>
+            <div class="indicator-settings">
+              <div class="setting-item">
+                <label for="macd-fast">Fast Period</label>
+                <input type="number" id="macd-fast" name="macdSettings.fast" min="2" max="50" value="12">
+              </div>
+              <div class="setting-item">
+                <label for="macd-slow">Slow Period</label>
+                <input type="number" id="macd-slow" name="macdSettings.slow" min="5" max="100" value="26">
+              </div>
+              <div class="setting-item">
+                <label for="macd-signal">Signal Period</label>
+                <input type="number" id="macd-signal" name="macdSettings.signal" min="2" max="50" value="9">
+              </div>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label>EMA Settings</label>
+            <div class="indicator-settings">
+              <div class="setting-item">
+                <label for="ema-fast">Fast EMA</label>
+                <input type="number" id="ema-fast" name="emaSettings.fast" min="2" max="50" value="9">
+              </div>
+              <div class="setting-item">
+                <label for="ema-slow">Slow EMA</label>
+                <input type="number" id="ema-slow" name="emaSettings.slow" min="5" max="200" value="21">
+              </div>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label>Additional Indicators</label>
+            <div class="additional-indicators">
+              <div class="indicator-item">
+                <input type="checkbox" id="indicator-rsi" name="additionalIndicators" value="rsi">
+                <label for="indicator-rsi">RSI</label>
+                <input type="number" id="rsi-period" name="rsiSettings.period" min="2" max="50" value="14" disabled>
+              </div>
+              <div class="indicator-item">
+                <input type="checkbox" id="indicator-bb" name="additionalIndicators" value="bb">
+                <label for="indicator-bb">Bollinger Bands</label>
+                <input type="number" id="bb-period" name="bbSettings.period" min="5" max="50" value="20" disabled>
+              </div>
+              <div class="indicator-item">
+                <input type="checkbox" id="indicator-volume" name="additionalIndicators" value="volume">
+                <label for="indicator-volume">Volume Profile</label>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="form-section">
+          <h3>Alert Conditions</h3>
+          
+          <div class="form-group">
+            <label>Crossover Settings</label>
+            <div class="crossover-settings">
+              <div class="setting-item checkbox">
+                <input type="checkbox" id="simultaneous-crossovers" name="alertConditions.simultaneousCrossovers" checked>
+                <label for="simultaneous-crossovers">Simultaneous Crossovers</label>
+              </div>
+              <div class="setting-item checkbox">
+                <input type="checkbox" id="sequential-crossovers" name="alertConditions.sequentialCrossovers" checked>
+                <label for="sequential-crossovers">Sequential Crossovers</label>
+              </div>
+              <div class="setting-item">
+                <label for="max-candle-window">Max Candle Window</label>
+                <input type="number" id="max-candle-window" name="alertConditions.maxCandleWindow" min="1" max="20" value="6">
+              </div>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label>Direction Filters</label>
+            <div class="direction-filters">
+              <div class="filter-item">
+                <input type="checkbox" id="direction-bullish" name="alertConditions.directions" value="bullish" checked>
+                <label for="direction-bullish">Bullish Signals</label>
+              </div>
+              <div class="filter-item">
+                <input type="checkbox" id="direction-bearish" name="alertConditions.directions" value="bearish" checked>
+                <label for="direction-bearish">Bearish Signals</label>
+              </div>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label>Confirmation Requirements</label>
+            <div class="confirmation-requirements">
+              <div class="requirement-item checkbox">
+                <input type="checkbox" id="require-volume" name="alertConditions.requireVolume">
+                <label for="require-volume">Require Volume Confirmation</label>
+              </div>
+              <div class="requirement-item">
+                <label for="volume-threshold">Volume Threshold (%)</label>
+                <input type="number" id="volume-threshold" name="alertConditions.volumeThreshold" min="100" max="500" value="150" disabled>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="form-section">
+          <h3>Notification Settings</h3>
+          
+          <div class="form-group">
+            <label>Notification Methods</label>
+            <div class="notification-methods">
+              <div class="method-item checkbox">
+                <input type="checkbox" id="browser-notifications" name="notificationMethods.browser" checked>
+                <label for="browser-notifications">Browser Notifications</label>
+              </div>
+              <div class="method-item checkbox">
+                <input type="checkbox" id="sound-alerts" name="notificationMethods.sound">
+                <label for="sound-alerts">Sound Alerts</label>
+              </div>
+              <div class="method-item checkbox">
+                <input type="checkbox" id="telegram-notifications" name="notificationMethods.telegram">
+                <label for="telegram-notifications">Telegram Notifications</label>
+              </div>
+              <div class="method-item">
+                <label for="telegram-bot-token">Telegram Bot Token</label>
+                <input type="text" id="telegram-bot-token" name="telegramSettings.botToken" placeholder="Bot Token" disabled>
+              </div>
+              <div class="method-item">
+                <label for="telegram-chat-id">Telegram Chat ID</label>
+                <input type="text" id="telegram-chat-id" name="telegramSettings.chatId" placeholder="Chat ID" disabled>
+              </div>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label>AI Integration</label>
+            <div class="ai-integration">
+              <div class="ai-item checkbox">
+                <input type="checkbox" id="include-ai-explanation" name="aiSettings.includeExplanation" checked>
+                <label for="include-ai-explanation">Include AI Explanation in Notifications</label>
+              </div>
+              <div class="ai-item">
+                <label for="ai-provider">AI Provider</label>
+                <select id="ai-provider" name="aiSettings.provider">
+                  <option value="gemini">Google Gemini</option>
+                  <option value="perplexity" selected>Perplexity Pro</option>
+                  <option value="both">Both (Gemini + Perplexity)</option>
+                </select>
+              </div>
+              <div class="ai-item">
+                <label for="explanation-length">Explanation Length</label>
+                <select id="explanation-length" name="aiSettings.explanationLength">
+                  <option value="short">Short (1-2 sentences)</option>
+                  <option value="medium" selected>Medium (3-5 sentences)</option>
+                  <option value="long">Long (Detailed analysis)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="form-section">
+          <h3>Advanced API Settings</h3>
+          
+          <div class="form-group">
+            <label for="api-source">Primary Data Source</label>
+            <select id="api-source" name="apiSettings.primarySource">
+              <option value="alphavantage" selected>Alpha Vantage</option>
+              <option value="financialmodelingprep">Financial Modeling Prep</option>
+              <option value="polygon">Polygon.io</option>
+              <option value="tiingo">Tiingo</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="backup-api-source">Backup Data Source</label>
+            <select id="backup-api-source" name="apiSettings.backupSource">
+              <option value="none">None</option>
+              <option value="alphavantage">Alpha Vantage</option>
+              <option value="financialmodelingprep" selected>Financial Modeling Prep</option>
+              <option value="polygon">Polygon.io</option>
+              <option value="tiingo">Tiingo</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="api-request-limit">API Request Limit (per minute)</label>
+            <input type="number" id="api-request-limit" name="apiSettings.requestLimit" min="1" max="100" value="5">
+          </div>
+          
+          <div class="form-group">
+            <label for="data-caching">Data Caching Duration (minutes)</label>
+            <input type="number" id="data-caching" name="apiSettings.cacheDuration" min="1" max="60" value="15">
+          </div>
+        </div>
+        
+        <div class="form-actions">
+          <button type="submit" id="save-options" class="primary-button">Save Settings</button>
+          <button type="button" id="reset-options" class="secondary-button">Reset to Defaults</button>
+        </div>
+      </form>
+    </main>
+    
+    <footer>
+      <p>Advanced Trading Notifications &copy; 2023</p>
+    </footer>
+  </div>
+  
+  <script src="options.js"></script>
+</body>
+</html>
