@@ -1,14 +1,45 @@
 // Environment variables utility
 
-// Default API keys - these will be bundled with the extension but not exposed to users
+// Default API keys - these will be loaded from environment variables
+// and not exposed to users
 const DEFAULT_API_KEYS = {
-  alphavantage: 'ER6PI8OVOQXZDCMP',
-  financialmodelingprep: 'odP1hkwF05hrSAHTfFToF4tLlLCwvOzQ',
-  polygon: 'ptfF_xeBLK4kVrVmt0niYiqLNR4chcLm',
-  tiingo: 'dc7ee21bf0fa3c5539877e98237e38f7f36a6980',
-  gemini: 'AIzaSyBgGmck1EiYiYIntREANiqyuVqWfvDSDxo',
-  perplexity: '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'
+  alphavantage: '',
+  financialmodelingprep: '',
+  polygon: '',
+  tiingo: '',
+  gemini: '',
+  perplexity: ''
 };
+
+/**
+ * Load environment variables from .env file
+ * @returns {Promise<Object>} - Object containing environment variables
+ */
+async function loadEnvVariables() {
+  try {
+    const response = await fetch(chrome.runtime.getURL('.env'));
+    const envText = await response.text();
+
+    // Parse .env file
+    const envVars = {};
+    envText.split('\n').forEach(line => {
+      // Skip comments and empty lines
+      if (line.trim().startsWith('#') || !line.trim()) {
+        return;
+      }
+
+      const [key, value] = line.split('=');
+      if (key && value) {
+        envVars[key.trim()] = value.trim();
+      }
+    });
+
+    return envVars;
+  } catch (error) {
+    console.error('Error loading environment variables:', error);
+    return {};
+  }
+}
 
 // Store API keys in a secure, non-user-accessible area
 let secureApiKeys = null;
@@ -19,13 +50,24 @@ let secureApiKeys = null;
  */
 export async function initializeSecureApiKeys() {
   // Use chrome.storage.local but in a special namespace that's not exposed in the UI
-  return new Promise((resolve) => {
-    chrome.storage.local.get(['__secureApiKeys'], (result) => {
+  return new Promise(async (resolve) => {
+    chrome.storage.local.get(['__secureApiKeys'], async (result) => {
       if (result.__secureApiKeys) {
         secureApiKeys = result.__secureApiKeys;
       } else {
-        // First time initialization - use defaults
-        secureApiKeys = DEFAULT_API_KEYS;
+        // First time initialization - load from environment variables
+        const envVars = await loadEnvVariables();
+
+        // Initialize API keys from environment variables
+        secureApiKeys = {
+          alphavantage: envVars.ALPHA_VANTAGE_API_KEY || DEFAULT_API_KEYS.alphavantage,
+          financialmodelingprep: envVars.FINANCIAL_MODELING_PREP_API_KEY || DEFAULT_API_KEYS.financialmodelingprep,
+          polygon: envVars.POLYGON_API_KEY || DEFAULT_API_KEYS.polygon,
+          tiingo: envVars.TIINGO_API_KEY || DEFAULT_API_KEYS.tiingo,
+          gemini: envVars.GEMINI_API_KEY || DEFAULT_API_KEYS.gemini,
+          perplexity: envVars.PERPLEXITY_API_KEY || DEFAULT_API_KEYS.perplexity
+        };
+
         chrome.storage.local.set({ __secureApiKeys: secureApiKeys });
       }
       resolve(secureApiKeys);

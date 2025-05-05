@@ -80,11 +80,30 @@ A powerful Chrome extension that provides AI-powered trading alerts and notifica
 
 ## API Keys
 
-The extension comes with pre-configured API keys that are securely managed. These keys are:
+The extension uses environment variables to securely manage API keys. These keys are:
 
+- Stored in a `.env` file (not included in the repository)
+- Loaded at runtime and stored securely in Chrome's storage
 - Not visible in the UI
-- Stored in a secure namespace in Chrome's storage
 - Used automatically for all API requests
+
+### Setting Up API Keys
+
+1. Copy the `.env.example` file to a new file named `.env`
+2. Replace the placeholder values with your actual API keys
+3. The extension will automatically load these keys when it starts
+
+```
+# Example .env file
+ALPHA_VANTAGE_API_KEY=your_actual_key_here
+FINANCIAL_MODELING_PREP_API_KEY=your_actual_key_here
+POLYGON_API_KEY=your_actual_key_here
+TIINGO_API_KEY=your_actual_key_here
+GEMINI_API_KEY=your_actual_key_here
+PERPLEXITY_API_KEY=your_actual_key_here
+```
+
+> **Important**: Never commit your `.env` file with real API keys to version control. The `.env` file is included in `.gitignore` to prevent accidental exposure of your keys.
 
 The extension uses the following services:
 
@@ -217,5 +236,6 @@ No need to install desktop software or keep additional windows open. The extensi
 ---
 
 *Advanced Trading Notifications - Making sophisticated trading alerts accessible to everyone.*
-#   c u s t o m i z e d - a l e r t - e x t e n s i o n - f o r - t r a d i n g - p l a t f o r m s  
+#   c u s t o m i z e d - a l e r t - e x t e n s i o n - f o r - t r a d i n g - p l a t f o r m s 
+ 
  
