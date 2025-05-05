@@ -236,6 +236,4 @@ No need to install desktop software or keep additional windows open. The extensi
 ---
 
 *Advanced Trading Notifications - Making sophisticated trading alerts accessible to everyone.*
-#   c u s t o m i z e d - a l e r t - e x t e n s i o n - f o r - t r a d i n g - p l a t f o r m s 
- 
- 
+#
