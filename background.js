@@ -1,6 +1,7 @@
 // Background script for Advanced Trading Notifications extension
 // Handles data fetching, indicator calculations, and alert logic
-import { initializeSecureApiKeys, getApiKey } from './utils/env.js';
+import { initializeSecureApiKeys, getApiKey, getTwilioCredentials, checkTwilioConfigured } from './utils/env.js';
+import { sendWhatsAppNotification, formatAlertMessage } from './utils/whatsapp.js';
 
 // Configuration defaults
 const DEFAULT_CONFIG = {
@@ -11,10 +12,16 @@ const DEFAULT_CONFIG = {
     simultaneousCrossovers: true,
     sequentialCrossovers: true,
     maxCandleWindow: 6,
-    includeAiExplanation: true
+    includeAiExplanation: true,
+    sendWhatsApp: true, // Send WhatsApp notifications
+    sendBrowserNotifications: true // Send browser notifications
   },
   lastChecked: {},
-  customAlerts: [] // Store user-defined custom alerts
+  customAlerts: [], // Store user-defined custom alerts
+  tradingViewIntegration: {
+    enabled: true,
+    autoInject: true
+  }
 };
 
 // State to track crossover history
@@ -37,6 +44,19 @@ chrome.runtime.onInstalled.addListener(async () => {
   chrome.alarms.create('checkCustomAlertsAlarm', {
     periodInMinutes: 5 // Check custom alerts every 5 minutes
   });
+
+  // Set up TradingView integration
+  if (config.tradingViewIntegration && config.tradingViewIntegration.enabled) {
+    // Find any TradingView tabs
+    chrome.tabs.query({ url: "*://*.tradingview.com/*" }, (tabs) => {
+      if (tabs.length > 0) {
+        // Inject our content script into existing TradingView tabs
+        tabs.forEach(tab => {
+          chrome.tabs.sendMessage(tab.id, { action: 'injectTradingViewUI' });
+        });
+      }
+    });
+  }
 });
 
 // Listen for alarm to fetch data
@@ -46,6 +66,19 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     await fetchDataAndCheckIndicators(config);
   } else if (alarm.name === 'checkCustomAlertsAlarm') {
     await checkCustomAlerts();
+  }
+});
+
+// Listen for tab updates to inject TradingView UI
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'complete' && tab.url && tab.url.includes('tradingview.com')) {
+    const config = await getConfig();
+
+    if (config.tradingViewIntegration && config.tradingViewIntegration.enabled &&
+        config.tradingViewIntegration.autoInject) {
+      // Inject our content script UI into TradingView
+      chrome.tabs.sendMessage(tabId, { action: 'injectTradingViewUI' });
+    }
   }
 });
 
@@ -82,6 +115,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse(result);
     });
     return true; // Required for async sendResponse
+  } else if (message.action === 'checkTwilioStatus') {
+    checkTwilioConfigured().then(configured => {
+      sendResponse({ configured });
+    }).catch(error => {
+      console.error('Error checking Twilio status:', error);
+      sendResponse({ configured: false, error: error.message });
+    });
+    return true; // Required for async sendResponse
+  } else if (message.action === 'contentScriptData') {
+    // Handle data from content script (TradingView integration)
+    if (message.data && message.data.symbol) {
+      console.log('Received data from TradingView:', message.data);
+      // Store the current TradingView symbol and data
+      chrome.storage.local.set({ tradingViewData: message.data });
+    }
   }
 });
 
@@ -278,25 +326,59 @@ async function processAlert(symbol, crossoverResult, config) {
   // Generate notification title and message
   const title = `${symbol} Alert: ${crossoverResult.type}`;
   let message = crossoverResult.description;
+  let aiExplanation = '';
 
   // Add AI explanation if enabled
   if (config.notificationSettings.includeAiExplanation) {
     try {
-      const aiExplanation = await getAiExplanation(symbol, crossoverResult, config);
+      aiExplanation = await getAiExplanation(symbol, crossoverResult, config);
       message += `\n\nAI Analysis: ${aiExplanation}`;
     } catch (error) {
       console.error('Error getting AI explanation:', error);
     }
   }
 
-  // Send notification
-  chrome.notifications.create({
-    type: 'basic',
-    iconUrl: 'icons/icon48.png',
-    title: title,
-    message: message,
-    priority: 2
-  });
+  // Send browser notification if enabled
+  if (config.notificationSettings.sendBrowserNotifications) {
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: 'icons/icon48.png',
+      title: title,
+      message: message,
+      priority: 2
+    });
+  }
+
+  // Send WhatsApp notification if enabled
+  if (config.notificationSettings.sendWhatsApp) {
+    try {
+      const isTwilioConfigured = await checkTwilioConfigured();
+
+      if (isTwilioConfigured) {
+        // Add explanation to crossover result for WhatsApp message
+        const alertData = {
+          ...crossoverResult,
+          symbol,
+          timestamp: new Date().toISOString(),
+          explanation: aiExplanation
+        };
+
+        // Format the message for WhatsApp
+        const whatsappMessage = formatAlertMessage(alertData);
+
+        // Get Twilio credentials
+        const twilioCredentials = await getTwilioCredentials();
+
+        // Send the WhatsApp notification
+        await sendWhatsAppNotification(whatsappMessage, twilioCredentials);
+        console.log('WhatsApp notification sent for', symbol);
+      } else {
+        console.warn('Twilio not configured, skipping WhatsApp notification');
+      }
+    } catch (whatsappError) {
+      console.error('Error sending WhatsApp notification:', whatsappError);
+    }
+  }
 
   // Save alert to history
   saveAlertToHistory(symbol, crossoverResult);
@@ -491,19 +573,26 @@ function saveAlertToHistory(symbol, crossoverResult) {
 // Create a custom alert from natural language text
 async function createCustomAlert(alertText) {
   try {
-    // Get API key for AI processing
-    const apiKey = await getApiKey('gemini');
+    console.log('Creating custom alert for:', alertText);
 
-    if (!apiKey) {
-      return { success: false, error: 'No AI API key available' };
+    if (!alertText || typeof alertText !== 'string' || alertText.trim() === '') {
+      console.error('Invalid alert text:', alertText);
+      return { success: false, error: 'Alert text cannot be empty' };
     }
 
-    // Use AI to parse the alert text
+    // Get API key for AI processing
+    const apiKey = await getApiKey('gemini');
+    console.log('Got API key for Gemini:', apiKey ? 'Yes' : 'No');
+
+    // Use AI to parse the alert text (will fall back to basic parsing if no API key)
     const alertCondition = await parseAlertCondition(alertText, apiKey);
 
     if (!alertCondition) {
+      console.error('Failed to parse alert condition');
       return { success: false, error: 'Could not parse alert condition' };
     }
+
+    console.log('Parsed alert condition:', alertCondition);
 
     // Save the custom alert
     const config = await getConfig();
@@ -515,13 +604,19 @@ async function createCustomAlert(alertText) {
       active: true
     };
 
+    // Initialize customAlerts array if it doesn't exist
+    if (!config.customAlerts) {
+      config.customAlerts = [];
+    }
+
     config.customAlerts.push(customAlert);
     await saveConfig(config);
 
+    console.log('Custom alert created successfully:', customAlert);
     return { success: true, alert: customAlert };
   } catch (error) {
     console.error('Error creating custom alert:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: error.message || 'Unknown error creating alert' };
   }
 }
 
@@ -562,21 +657,51 @@ async function checkCustomAlerts() {
       const isTriggered = await evaluateAlertCondition(alert.condition);
 
       if (isTriggered) {
-        // Create notification for triggered alert
-        chrome.notifications.create({
-          type: 'basic',
-          iconUrl: 'icons/icon48.png',
-          title: 'Custom Alert Triggered',
-          message: alert.text,
-          priority: 2
-        });
-
-        // Save to alert history
-        saveAlertToHistory(alert.condition.symbol, {
+        // Create alert data
+        const alertData = {
           type: 'custom',
           direction: alert.condition.direction || 'neutral',
-          description: alert.text
-        });
+          description: alert.text,
+          symbol: alert.condition.symbol
+        };
+
+        // Create browser notification if enabled
+        if (config.notificationSettings.sendBrowserNotifications) {
+          chrome.notifications.create({
+            type: 'basic',
+            iconUrl: 'icons/icon48.png',
+            title: `${alertData.direction.toUpperCase()} ALERT: ${alertData.symbol}`,
+            message: alert.text,
+            priority: 2
+          });
+        }
+
+        // Send WhatsApp notification if enabled
+        if (config.notificationSettings.sendWhatsApp) {
+          try {
+            const isTwilioConfigured = await checkTwilioConfigured();
+
+            if (isTwilioConfigured) {
+              // Format the message for WhatsApp
+              const whatsappMessage = formatAlertMessage({
+                ...alertData,
+                timestamp: new Date().toISOString()
+              });
+
+              // Get Twilio credentials
+              const twilioCredentials = await getTwilioCredentials();
+
+              // Send the WhatsApp notification
+              await sendWhatsAppNotification(whatsappMessage, twilioCredentials);
+              console.log('WhatsApp notification sent for custom alert:', alertData.symbol);
+            }
+          } catch (whatsappError) {
+            console.error('Error sending WhatsApp notification for custom alert:', whatsappError);
+          }
+        }
+
+        // Save to alert history
+        saveAlertToHistory(alertData.symbol, alertData);
 
         triggeredAlerts.push(alert);
       }
@@ -592,6 +717,32 @@ async function checkCustomAlerts() {
 // Parse alert condition from natural language using AI
 async function parseAlertCondition(alertText, apiKey) {
   try {
+    console.log('Parsing alert condition for:', alertText);
+
+    // Extract symbol directly from the alert text as a fallback
+    let extractedSymbol = null;
+    const symbolMatch = alertText.match(/\b[A-Z]{1,5}\b/);
+    if (symbolMatch) {
+      extractedSymbol = symbolMatch[0];
+      console.log('Extracted symbol from text:', extractedSymbol);
+    }
+
+    // If we can't use AI (no API key), create a basic condition
+    if (!apiKey) {
+      console.log('No API key available, using basic parsing');
+      return {
+        symbol: extractedSymbol || 'UNKNOWN',
+        indicator: alertText.includes('MACD') ? 'MACD' :
+                  alertText.includes('RSI') ? 'RSI' :
+                  alertText.includes('EMA') ? 'EMA' : 'price',
+        condition: alertText.includes('above') ? 'above' :
+                  alertText.includes('below') ? 'below' :
+                  alertText.includes('cross') ? 'crossover' : 'change',
+        direction: alertText.includes('bullish') ? 'bullish' :
+                  alertText.includes('bearish') ? 'bearish' : 'neutral'
+      };
+    }
+
     // Construct the prompt for Gemini
     const prompt = `You are a trading assistant that converts natural language alert requests into structured JSON format.
 
@@ -607,6 +758,8 @@ Return ONLY a JSON object with these fields:
 - comparisonIndicator: If comparing two indicators (e.g., "signal line" in "MACD crosses above signal line")
 
 If any field is not applicable, omit it from the JSON.`;
+
+    console.log('Sending request to Gemini API');
 
     // Make API request to Gemini
     const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent', {
@@ -629,23 +782,78 @@ If any field is not applicable, omit it from the JSON.`;
     });
 
     const data = await response.json();
+    console.log('Received response from Gemini API:', data);
+
+    // Check for errors in the API response
+    if (data.error) {
+      console.error('Gemini API error:', data.error);
+      throw new Error(`Gemini API error: ${data.error.message || 'Unknown error'}`);
+    }
 
     // Extract the generated text
     if (data.candidates && data.candidates[0] && data.candidates[0].content) {
       const generatedText = data.candidates[0].content.parts[0].text;
+      console.log('Generated text:', generatedText);
 
       // Extract JSON from the response
       const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const jsonStr = jsonMatch[0];
-        return JSON.parse(jsonStr);
+        console.log('Extracted JSON:', jsonStr);
+
+        try {
+          const parsedJson = JSON.parse(jsonStr);
+
+          // Ensure we have at least a symbol
+          if (!parsedJson.symbol && extractedSymbol) {
+            parsedJson.symbol = extractedSymbol;
+          }
+
+          // If we still don't have a symbol, use a default
+          if (!parsedJson.symbol) {
+            parsedJson.symbol = 'UNKNOWN';
+          }
+
+          return parsedJson;
+        } catch (jsonError) {
+          console.error('Error parsing JSON:', jsonError);
+          throw new Error('Invalid JSON in AI response');
+        }
       }
     }
 
-    throw new Error('Could not parse alert condition from AI response');
+    // If we get here, we couldn't parse the AI response
+    // Fall back to a basic condition with the extracted symbol
+    console.log('Falling back to basic condition');
+    return {
+      symbol: extractedSymbol || 'UNKNOWN',
+      indicator: alertText.includes('MACD') ? 'MACD' :
+                alertText.includes('RSI') ? 'RSI' :
+                alertText.includes('EMA') ? 'EMA' : 'price',
+      condition: alertText.includes('above') ? 'above' :
+                alertText.includes('below') ? 'below' :
+                alertText.includes('cross') ? 'crossover' : 'change',
+      direction: alertText.includes('bullish') ? 'bullish' :
+                alertText.includes('bearish') ? 'bearish' : 'neutral'
+    };
   } catch (error) {
     console.error('Error parsing alert condition:', error);
-    return null;
+
+    // Return a basic condition as a fallback
+    const symbolMatch = alertText.match(/\b[A-Z]{1,5}\b/);
+    const extractedSymbol = symbolMatch ? symbolMatch[0] : 'UNKNOWN';
+
+    return {
+      symbol: extractedSymbol,
+      indicator: alertText.includes('MACD') ? 'MACD' :
+                alertText.includes('RSI') ? 'RSI' :
+                alertText.includes('EMA') ? 'EMA' : 'price',
+      condition: alertText.includes('above') ? 'above' :
+                alertText.includes('below') ? 'below' :
+                alertText.includes('cross') ? 'crossover' : 'change',
+      direction: alertText.includes('bullish') ? 'bullish' :
+                alertText.includes('bearish') ? 'bearish' : 'neutral'
+    };
   }
 }
 

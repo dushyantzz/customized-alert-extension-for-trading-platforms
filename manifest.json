@@ -8,10 +8,13 @@
     "notifications",
     "alarms",
     "tabs",
-    "activeTab"
+    "activeTab",
+    "scripting"
   ],
   "host_permissions": [
-    "https://*/*"
+    "https://*/*",
+    "https://www.tradingview.com/*",
+    "https://api.twilio.com/*"
   ],
   "background": {
     "service_worker": "background.js",
@@ -32,9 +35,12 @@
       "run_at": "document_idle"
     }
   ],
+  "externally_connectable": {
+    "matches": ["https://*.tradingview.com/*"]
+  },
   "web_accessible_resources": [
     {
-      "resources": [".env"],
+      "resources": [".env", "utils/*.js"],
       "matches": ["<all_urls>"]
     }
   ],
